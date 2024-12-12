@@ -129,55 +129,55 @@ def main():
         start_date = st.date_input('Lånets startdato', 
                                   date(2025, 8, 15))
 
-# Extra payments input
-with st.expander("Ekstra Innbetalinger ⬇️", expanded=False):
-    st.markdown("Legg til ekstra innbetaling. Velg om du for eksempel skal bruke egenkapital, eller investere bonusen du har fått fra jobb til nedbetaling")
-    
-    col1, col2, col3 = st.columns([2, 2, 1])
-    
-    with col1:
-        extra_payment_date = st.date_input(
-            'Velg dato',
-            min_value=start_date,
-            value=start_date,
-            key='extra_payment_date'
+    # Extra payments input
+    with st.expander("Ekstra Innbetalinger ⬇️", expanded=False):
+        st.markdown("Legg til ekstra innbetaling. Velg om du for eksempel skal bruke egenkapital, eller investere bonusen du har fått fra jobb til nedbetaling")
+        
+        col1, col2, col3 = st.columns([2, 2, 1])
+        
+        with col1:
+            extra_payment_date = st.date_input(
+                'Velg dato',
+                min_value=start_date,
+                value=start_date,
+                key='extra_payment_date'
+            )
+        
+        with col2:
+            extra_payment_amount = st.number_input(
+                'Beløp (NOK)',
+                min_value=0,
+                value=100000,
+                step=10000,
+                format='%d',
+                key='extra_payment_amount'
+            )
+        
+        with col3:
+            if st.button('Legg til', key='add_payment'):
+                current_payments = st.session_state.get('extra_payments', '')
+                new_payment = f"{extra_payment_date}, {extra_payment_amount}"
+                if current_payments:
+                    current_payments = current_payments + '\n' + new_payment
+                else:
+                    current_payments = new_payment
+                st.session_state['extra_payments'] = current_payments
+                st.rerun()
+        
+        # Display and edit current extra payments
+        extra_payments_input = st.text_area(
+            'Registrerte ekstra innbetalinger',
+            value=st.session_state.get('extra_payments', ''),
+            height=100,
+            key='extra_payments_display',
+            help='Du kan redigere eller slette innbetalinger direkte i dette feltet'
         )
-    
-    with col2:
-        extra_payment_amount = st.number_input(
-            'Beløp (NOK)',
-            min_value=0,
-            value=100000,
-            step=10000,
-            format='%d',
-            key='extra_payment_amount'
-        )
-    
-    with col3:
-        if st.button('Legg til', key='add_payment'):
-            current_payments = st.session_state.get('extra_payments', '')
-            new_payment = f"{extra_payment_date}, {extra_payment_amount}"
-            if current_payments:
-                current_payments = current_payments + '\n' + new_payment
-            else:
-                current_payments = new_payment
-            st.session_state['extra_payments'] = current_payments
+        
+        if st.button('Nullstill alle ekstra innbetalinger'):
+            st.session_state['extra_payments'] = ''
             st.rerun()
     
-    # Display and edit current extra payments
-    extra_payments_input = st.text_area(
-        'Registrerte ekstra innbetalinger',
-        value=st.session_state.get('extra_payments', ''),
-        height=100,
-        key='extra_payments_display',
-        help='Du kan redigere eller slette innbetalinger direkte i dette feltet'
-    )
-    
-    if st.button('Nullstill alle ekstra innbetalinger'):
-        st.session_state['extra_payments'] = ''
-        st.rerun()
-
-extra_payments = process_extra_payments(extra_payments_input)
+    extra_payments = process_extra_payments(extra_payments_input)
     
     # Calculate amortization schedule
     schedule = calculate_amortization_schedule(
