@@ -83,7 +83,7 @@ def calculate_amortization_schedule(principal, annual_rate, years, monthly_fee, 
     return pd.DataFrame(schedule)
 
 def main():
-    st.title('Boliglån Kalkulator med Utleieinntekter 🏠')
+    st.title('Boliglånskalkulator med eventuelle Utleieinntekter 🤑')
     
     # Input parameters
     col1, col2 = st.columns(2)
