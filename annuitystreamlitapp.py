@@ -207,9 +207,9 @@ def main():
 
     # Custom CSS styling with slightly larger font
     metric_style = """
-    <div style="font-size: 1.2em;">
+    <div style="font-size: 1.0em;">
         <p style="margin-bottom: 0px;">{label}</p>
-        <p style="font-size: 1.5em; font-weight: bold; margin-top: 4px;">{value}</p>
+        <p style="font-size: 1.2em; font-weight: bold; margin-top: 4px;">{value}</p>
     </div>
     """
 
