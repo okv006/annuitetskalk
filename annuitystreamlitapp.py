@@ -275,7 +275,7 @@ def main():
     ))
 
     fig_coverage.update_layout(
-        title='Månedlig Rentedekning over Tid',
+        title='Månedlig rentedekning over tid',
         xaxis_title='Dato',
         yaxis_title='Beløp (NOK)',
         yaxis2=dict(
