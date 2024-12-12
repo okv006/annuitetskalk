@@ -6,7 +6,13 @@ from datetime import datetime, date
 import locale
 
 # Set locale to Norwegian
-locale.setlocale(locale.LC_ALL, 'nb_NO.UTF-8')
+try:
+    locale.setlocale(locale.LC_ALL, 'nb_NO.UTF-8')
+except:
+    try:
+        locale.setlocale(locale.LC_ALL, 'nb_NO')
+    except:
+        locale.setlocale(locale.LC_ALL, '')
 
 def calculate_monthly_payment(principal, annual_rate, years):
     """Calculate the monthly mortgage payment"""
