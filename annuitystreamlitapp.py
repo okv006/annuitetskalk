@@ -48,6 +48,10 @@ def calculate_amortization_schedule(principal, annual_rate, years, monthly_fee, 
     excess_for_next_month = 0
     reinvested_total = 0
     
+    # Create a sorted list of extra payment dates for easier lookups
+    extra_payment_dates = sorted(extra_payments.keys())
+    processed_dates = set()  # To track which dates we've already processed
+    
     # We'll recalculate for each payment to support reducing monthly payments
     for payment_num in range(1, num_payments + 1):
         if not reduce_term:
@@ -63,34 +67,45 @@ def calculate_amortization_schedule(principal, annual_rate, years, monthly_fee, 
         
         # Calculate interest and principal for this payment
         interest_payment = remaining_balance * monthly_rate
-        principal_payment = monthly_payment - interest_payment
+        regular_principal_payment = monthly_payment - interest_payment
         
-        # Add extra payment if exists for this date
+        # Initialize total principal payment with regular principal
+        principal_payment = regular_principal_payment
+        
+        # Get the next payment date to define our date range
+        next_date = date(current_date.year + ((current_date.month) // 12),
+                        ((current_date.month) % 12) + 1,
+                        min(current_date.day, 28))
+        
+        # Find any extra payments scheduled on this specific date
         extra_payment = extra_payments.get(current_date, 0)
         
         # Add excess from previous month if reinvest_excess is enabled
         if reinvest_excess and excess_for_next_month > 0:
-            extra_payment += excess_for_next_month
             reinvested_this_month = excess_for_next_month
-            reinvested_total += excess_for_next_month
+            extra_payment += reinvested_this_month
+            reinvested_total += reinvested_this_month
             excess_for_next_month = 0
         else:
             reinvested_this_month = 0
         
-        total_extra_payments += extra_payment
-        principal_payment += extra_payment + monthly_extra_income  # Add monthly extra income to principal payment
+        # Add extra payment and monthly extra income to principal payment
+        principal_payment += extra_payment + monthly_extra_income
         
-        # Calculate effective monthly cost (what the borrower actually pays)
+        # Calculate effective monthly cost (what the borrower actually pays out of pocket)
         monthly_cost = max(0, monthly_payment + monthly_fee - rental_income - monthly_extra_income)
         
-        # Calculate excess earnings for reinvestment
-        if reinvest_excess and rental_income > (interest_payment + principal_payment):
-            excess_for_next_month = rental_income - (interest_payment + principal_payment)
+        # Calculate excess for reinvestment (only if rental income exceeds interest payment)
+        if reinvest_excess and rental_income > interest_payment:
+            # For reinvestment, we consider excess as rental income over interest payment
+            potential_excess = rental_income - interest_payment
+            # But we can only reinvest what's not already being used for principal
+            excess_for_next_month = max(0, potential_excess - regular_principal_payment)
             excess_reinvested = excess_for_next_month
         else:
             excess_reinvested = 0
             
-        # Update remaining balance
+        # Update remaining balance - ensure we're reducing by the full principal payment
         remaining_balance = max(0, remaining_balance - principal_payment)
         
         schedule.append({
@@ -98,6 +113,7 @@ def calculate_amortization_schedule(principal, annual_rate, years, monthly_fee, 
             'Payment_Num': payment_num,
             'Payment': monthly_payment,
             'Principal': principal_payment,
+            'Regular_Principal': regular_principal_payment,
             'Interest': interest_payment,
             'Extra_Payment': extra_payment,
             'Monthly_Extra_Income': monthly_extra_income,
@@ -112,10 +128,8 @@ def calculate_amortization_schedule(principal, annual_rate, years, monthly_fee, 
         if remaining_balance <= 0:
             break
             
-        # Move to next month - using min(day, 28) to avoid month day overflow
-        current_date = date(current_date.year + ((current_date.month) // 12),
-                           ((current_date.month) % 12) + 1,
-                           min(current_date.day, 28))
+        # Move to next month
+        current_date = next_date
     
     return pd.DataFrame(schedule)
 
@@ -141,8 +155,8 @@ def main():
             annual_rate = st.number_input('Årlig nominell rente (%)', 
                                         min_value=0.1, 
                                         max_value=15.0, 
-                                        value=5.4, 
-                                        step=0.1)
+                                        value=5.45, 
+                                        step=0.25)
             
             years = st.number_input('Nedbetalingstid (År)', 
                                 min_value=1, 
@@ -153,7 +167,7 @@ def main():
         with col2:
             rental_income = st.number_input('Månedlig utleieinntekt (NOK)', 
                                         min_value=0, 
-                                        value=22500, 
+                                        value=72400, 
                                         step=500,
                                         format='%d')
             
@@ -165,7 +179,7 @@ def main():
             
             monthly_fee = st.number_input('Månedlig gebyr til banken (NOK)', 
                                         min_value=0, 
-                                        value=60, 
+                                        value=45, 
                                         step=5,
                                         format='%d')
             
@@ -227,7 +241,7 @@ def main():
             extra_payment_amount = st.number_input(
                 'Beløp (NOK)',
                 min_value=0,
-                value=100000,
+                value=2000000,
                 step=10000,
                 format='%d',
                 key='extra_payment_amount'
@@ -554,7 +568,7 @@ def main():
         display_df = schedule.copy()
         
         # Define columns to show in detailed view
-        numeric_columns = ['Payment', 'Principal', 'Interest', 'Extra_Payment', 
+        numeric_columns = ['Payment', 'Principal', 'Regular_Principal', 'Interest', 'Extra_Payment', 
                           'Monthly_Extra_Income', 'Remaining_Balance', 'Monthly_Fee', 
                           'Rental_Income', 'Monthly_Cost']
         
@@ -581,6 +595,7 @@ def main():
             'Interest': 'Renter',
             'Extra_Payment': 'Ekstra Innbetaling',
             'Monthly_Extra_Income': 'Fast Månedlig Ekstra',
+            'Regular_Principal': 'Standard Avdrag',
             'Remaining_Balance': 'Gjenstående Balanse',
             'Monthly_Fee': 'Månedlig Gebyr',
             'Rental_Income': 'Leieinntekt til banken',
